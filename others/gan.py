@@ -110,3 +110,70 @@ def generate_image(generator, epoch = 0, batch = 0, device=get_device()):
   plt.savefig(f'./runs/{UNIQUE_RUN_ID}/images/epoch{epoch}_batch{batch}.jpg')
 
 
+def save_models(generator, discriminator, epoch):
+  """ Save models at specific point in time. """
+  torch.save(generator.state_dict(), f'./runs/{UNIQUE_RUN_ID}/generator_{epoch}.pth')
+  torch.save(discriminator.state_dict(), f'./runs/{UNIQUE_RUN_ID}/discriminator_{epoch}.pth')
+
+
+def print_training_progress(batch, generator_loss, discriminator_loss):
+  """ Print training progress. """
+  print('Losses after mini-batch %5d: generator %e, discriminator %e' %
+        (batch, generator_loss, discriminator_loss))
+  
+  def prepare_dataset():
+    """ Prepare dataset through DataLoader """
+    # Prepare MNIST dataset
+    dataset = MNIST(os.getcwd(), download=True, train=True, transform=transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))
+    ]))
+    # Batch and shuffle data with DataLoader
+    trainloader = torch.utils.data.DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
+    # Return dataset through DataLoader
+    return trainloader
+  
+  def initialize_models(device = get_device()):
+    """ Initialize Generator and Discriminator models """
+    generator = Generator()
+    discriminator = Discriminator()
+    # Move models to specific device
+    generator.to(device)
+    discriminator.to(device)
+    # Return models
+    return generator, discriminator
+
+
+def initialize_loss():
+  """ Initialize loss function. """
+  return nn.BCELoss()
+
+
+def initialize_optimizers(generator, discriminator):
+  """ Initialize optimizers for Generator and Discriminator. """
+  generator_optimizer = torch.optim.AdamW(generator.parameters(), lr=OPTIMIZER_LR,betas=OPTIMIZER_BETAS)
+  discriminator_optimizer = torch.optim.AdamW(discriminator.parameters(), lr=OPTIMIZER_LR,betas=OPTIMIZER_BETAS)
+  return generator_optimizer, discriminator_optimizer
+
+def generate_noise(number_of_images = 1, noise_dimension = NOISE_DIMENSION, device=None):
+  """ Generate noise for number_of_images images, with a specific noise_dimension """
+  return torch.randn(number_of_images, noise_dimension, device=device)
+
+
+def efficient_zero_grad(model):
+  """ 
+    Apply zero_grad more efficiently
+    Source: https://betterprogramming.pub/how-to-make-your-pytorch-code-run-faster-93079f3c1f7b
+  """
+  for param in model.parameters():
+    param.grad = None
+
+
+def forward_and_backward(model, data, loss_function, targets):
+  """
+    Perform forward and backward pass in a generic way. Returns loss value.
+  """
+  outputs = model(data)
+  error = loss_function(outputs, targets)
+  error.backward()
+  return error.item()
