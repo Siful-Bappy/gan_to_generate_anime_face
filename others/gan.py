@@ -54,3 +54,20 @@ class Generator(nn.Module):
     return self.layers(x)
   
 
+class Discriminator(nn.Module):
+  """
+    Vanilla GAN Discriminator
+  """
+  def __init__(self):
+    super().__init__()
+    self.layers = nn.Sequential(
+      nn.Linear(GENERATOR_OUTPUT_IMAGE_SHAPE, 1024), 
+      nn.LeakyReLU(0.25),
+      nn.Linear(1024, 512), 
+      nn.LeakyReLU(0.25),
+      nn.Linear(512, 256), 
+      nn.LeakyReLU(0.25),
+      nn.Linear(256, 1),
+      nn.Sigmoid()
+    )
+
