@@ -55,13 +55,8 @@ class Generator(nn.Module):
     def __init__(self, nz, ngf, nc):
         super().__init__()
         self.main = nn.Sequential(
-            # input Z: (nz) --> (ngf*16) x 4 x 4
-            nn.ConvTranspose2d(nz, ngf*16, 4, 1, 0, bias=False),
-            nn.BatchNorm2d(ngf*16),
-            nn.ReLU(True),
-
-            ## (ngf*16) x 4 x 4 --> (ngf*8) x 4 x 4
-            nn.ConvTranspose2d(ngf*16, ngf*8, 4, 2, 1, bias=False),
+            # input Z: (nz) --> (ngf*8) x 4 x 4
+            nn.ConvTranspose2d(nz, ngf*8, 4, 1, 0, bias=False),
             nn.BatchNorm2d(ngf*8),
             nn.ReLU(True),
 
@@ -187,10 +182,10 @@ for epoch in range(num_epochs):
         torch.save(D.state_dict(), f"{ckpt_dir}/D_epoch25.pth")
         print(f"Saved checkpoints: {ckpt_dir}/G_epoch25.pth and {ckpt_dir}/D_epoch25.pth")
 
-        # 2) Generate exactly 24 samples for a 3x8 grid
+        # 2) Generate exactly 64 samples for a 8x8 grid
         with torch.no_grad():
             fake_samples = G(fixed_noise).detach().cpu()
             vutils.save_image(fake_samples, f"{save_dir}/epoch_{epoch+1:03d}.png",
                           normalize=True, nrow=8)
-            print(f"Saved sample grid: {save_dir}/epoch_{epoch+1:03d}.png (3 rows x 8 cols)")
+            print(f"Saved sample grid: {save_dir}/epoch_{epoch+1:03d}.png (8 rows x 8 cols)")
 
