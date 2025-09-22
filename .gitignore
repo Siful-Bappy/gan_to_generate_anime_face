@@ -1,10 +1,14 @@
 # .gitignore
 dataset/
+others/data/
+others/MNIST/
 *.csv
 *.ubyte
 *.pt
 *.pth
 checkpoints/
+dcgan_checkpoints/
+gan_samples/
 runs/
 outputs/
 logs/
