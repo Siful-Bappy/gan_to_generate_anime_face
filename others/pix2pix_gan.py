@@ -6,33 +6,67 @@ from torch.utils.data import Dataset, DataLoader
 import torchvision.utils as vutils
 from PIL import Image, ImageFilter
 import numpy as np
+from torchvision import transforms
 
 # Toy Paired Dataset
+# class ToyPairedDataset(Dataset):
+#     def __init__(self, length=500, size=64):
+#         super().__init__()
+#         self.length = length
+#         self.size = size
+
+#     def __len__(self):
+#         return self.length
+
+#     def __getitem__(self, idx):
+#         # Input A: random black/white "edges"
+#         A = (np.random.rand(self.size, self.size) > 0.7).astype(np.float32)
+
+#         # Target B: blurred & 3-channel version
+#         img = Image.fromarray((A * 255).astype(np.uint8))
+#         img = img.filter(ImageFilter.GaussianBlur(radius=2)).convert("RGB")
+#         B = np.array(img).astype(np.float32) / 255.0
+
+#         # Normalize [-1,1]
+#         A = (A - 0.5) / 0.5
+#         B = (B - 0.5) / 0.5
+
+#         A = torch.tensor(A).unsqueeze(0)       # [1,H,W]
+#         B = torch.tensor(B).permute(2,0,1)     # [3,H,W]
+#         return A, B
+
+transform_A = transforms.Compose([
+    transforms.Resize((64, 64)),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))   # grayscale input
+])
+
+transform_B = transforms.Compose([
+    transforms.Resize((64, 64)),
+    transforms.ToTensor(),
+    transforms.Normalize((0.5,), (0.5,))   # RGB target
+])
+
 class ToyPairedDataset(Dataset):
-    def __init__(self, length=500, size=64):
-        super().__init__()
-        self.length = length
-        self.size = size
+    def __init__(self, root):
+        self.input_dir = os.path.join(root, "inputs")
+        self.target_dir = os.path.join(root, "targets")
+        self.files = sorted(os.listdir(self.input_dir))
 
     def __len__(self):
-        return self.length
+        return len(self.files)
 
     def __getitem__(self, idx):
-        # Input A: random black/white "edges"
-        A = (np.random.rand(self.size, self.size) > 0.7).astype(np.float32)
+        input_path = os.path.join(self.input_dir, self.files[idx])
+        target_path = os.path.join(self.target_dir, self.files[idx])
 
-        # Target B: blurred & 3-channel version
-        img = Image.fromarray((A * 255).astype(np.uint8))
-        img = img.filter(ImageFilter.GaussianBlur(radius=2)).convert("RGB")
-        B = np.array(img).astype(np.float32) / 255.0
+        A = Image.open(input_path).convert("L")   # grayscale input
+        B = Image.open(target_path).convert("RGB") # target photo
 
-        # Normalize [-1,1]
-        A = (A - 0.5) / 0.5
-        B = (B - 0.5) / 0.5
-
-        A = torch.tensor(A).unsqueeze(0)       # [1,H,W]
-        B = torch.tensor(B).permute(2,0,1)     # [3,H,W]
+        A = transform_A(A)
+        B = transform_B(B)
         return A, B
+
 
 # Generator (U-Net small)
 class UNetGenerator(nn.Module):
@@ -100,7 +134,8 @@ class PatchDiscriminator(nn.Module):
 # Training Setup
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-dataset = ToyPairedDataset(length=200, size=64)
+# dataset = ToyPairedDataset(length=200, size=64)
+dataset = ToyPairedDataset("fish_dataset")
 # print(f"Dataset size: {len(dataset)} image pairs")
 # exit()
 dataloader = DataLoader(dataset, batch_size=8, shuffle=True)
