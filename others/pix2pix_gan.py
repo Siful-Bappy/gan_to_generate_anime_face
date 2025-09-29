@@ -68,35 +68,36 @@ class ToyPairedDataset(Dataset):
         return A, B
 
 
-# Generator (U-Net small)
+# Generator (U-Net)
 class UNetGenerator(nn.Module):
     def __init__(self, in_c=1, out_c=3, base_dim=64):
         super().__init__()
         self.down1 = nn.Sequential(
-            nn.Conv2d(in_c, base_dim, 4, 2, 1), 
+            nn.Conv2d(in_c, base_dim, 4, 2, 1), # input = [batch, 1, 64, 64] output = [batch, 64, 32, 32]
             nn.ReLU(True)
         )
         self.down2 = nn.Sequential(
-            nn.Conv2d(base_dim, base_dim*2, 4, 2, 1), 
+            nn.Conv2d(base_dim, base_dim*2, 4, 2, 1), # output [batch, 128, 16, 16]
+
             nn.BatchNorm2d(base_dim*2), 
             nn.ReLU(True)
         )
         self.bottleneck = nn.Sequential(
-            nn.Conv2d(base_dim*2, base_dim*4, 4, 2, 1), 
+            nn.Conv2d(base_dim*2, base_dim*4, 4, 2, 1), # [batch, 256, 8, 8]
             nn.ReLU(True)
         )
         self.up1 = nn.Sequential(
-            nn.ConvTranspose2d(base_dim*4, base_dim*2, 4, 2, 1), 
+            nn.ConvTranspose2d(base_dim*4, base_dim*2, 4, 2, 1), # [batch, 128, 16, 16]
             nn.BatchNorm2d(base_dim*2), 
             nn.ReLU(True)
         )
         self.up2 = nn.Sequential(
-            nn.ConvTranspose2d(base_dim*2, base_dim, 4, 2, 1), 
+            nn.ConvTranspose2d(base_dim*2, base_dim, 4, 2, 1), # [batch, 64, 32, 32]
             nn.BatchNorm2d(base_dim), 
             nn.ReLU(True)
         )
         self.final = nn.Sequential(
-            nn.ConvTranspose2d(base_dim, out_c, 4, 2, 1), 
+            nn.ConvTranspose2d(base_dim, out_c, 4, 2, 1), # [batch, 3, 64, 64]
             nn.Tanh()
         )
 
@@ -112,20 +113,20 @@ class UNetGenerator(nn.Module):
 class PatchDiscriminator(nn.Module):
     def __init__(self, in_c=1, out_c=3, base_dim=64):
         super().__init__()
-        C = in_c + out_c
+        C = in_c + out_c 
         self.net = nn.Sequential(
-            nn.Conv2d(C, base_dim, 4, 2, 1), 
+            nn.Conv2d(C, base_dim, 4, 2, 1), # [batch, 1+3, 64, 64] = [batch, 4, 64, 64]
             nn.LeakyReLU(0.2, True),
 
-            nn.Conv2d(base_dim, base_dim*2, 4, 2, 1), 
+            nn.Conv2d(base_dim, base_dim*2, 4, 2, 1), # [batch, 64, 32, 32]
             nn.BatchNorm2d(base_dim*2), 
             nn.LeakyReLU(0.2, True),
 
-            nn.Conv2d(base_dim*2, base_dim*4, 4, 2, 1), 
+            nn.Conv2d(base_dim*2, base_dim*4, 4, 2, 1), # [batch, 128, 16, 16]
             nn.BatchNorm2d(base_dim*4), 
             nn.LeakyReLU(0.2, True),
 
-            nn.Conv2d(base_dim*4, 1, 4, 1, 1)  # PatchGAN logits map
+            nn.Conv2d(base_dim*4, 1, 4, 1, 1)  # PatchGAN logits map # [1, 7, 7]
         )
 
     def forward(self, A, B):
@@ -144,6 +145,7 @@ G = UNetGenerator().to(device)
 D = PatchDiscriminator().to(device)
 
 criterion_adv = nn.BCEWithLogitsLoss()
+# criterion_adv = nn.BCELoss()
 criterion_l1  = nn.L1Loss()
 
 optimizer_G = optim.Adam(G.parameters(), lr=0.0002, betas=(0.5, 0.999))
